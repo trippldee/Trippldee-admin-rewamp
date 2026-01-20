@@ -1,0 +1,269 @@
+
+import React, { useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { LogOut, LayoutDashboard, Database, Settings, User, ChevronLeft, ChevronRight, Calculator, Calendar, Bell, ChevronDown, Utensils, Cloud, FileText, CreditCard, Ticket, BarChart3, Search, CheckCircle } from 'lucide-react';
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+
+const Dashboard = () => {
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [appSettings, setAppSettings] = useState({ logo: '', company_name: '' });
+    const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
+
+    // Fetch App Settings
+    React.useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const response = await axios.get('https://test.trippldee.com/next/api/app/settings');
+                if (response.data.success) {
+                    setAppSettings(response.data.data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch app settings:', error);
+            }
+        };
+        fetchSettings();
+    }, []);
+
+    const handleLogout = async () => {
+        setLoading(true);
+        try {
+            await axios.get('https://test.trippldee.com/next/api/admin-auth/logout');
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Even if API fails, we should logout locally
+        } finally {
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_user');
+            navigate('/');
+            setLoading(false);
+        }
+    };
+
+    const sidebarItems = [
+        { icon: LayoutDashboard, label: 'Dashboard', active: true },
+        { icon: User, label: 'Users' },
+        { icon: Utensils, label: 'Restaurants' },
+        { icon: Cloud, label: 'Cloud Kitchen' },
+        { icon: FileText, label: 'Post List' },
+        { icon: CreditCard, label: 'Subscription' },
+        { icon: Ticket, label: 'Tickets' },
+        { icon: BarChart3, label: 'Analytics' },
+    ];
+
+    return (
+        <div className="min-h-screen bg-white flex text-gray-800 font-sans">
+            {/* Sidebar */}
+            <aside
+                className={`${isSidebarCollapsed ? 'w-20' : 'w-64'
+                    } bg-white border-r border-gray-100 flex flex-col transition-all duration-300 ease-in-out hidden md:flex shadow-sm z-20`}
+            >
+                {/* Sidebar Header */}
+                <div className="h-20 flex items-center justify-between px-6">
+                    {!isSidebarCollapsed && (
+                        <div className="flex items-center gap-2">
+                            {appSettings.logo ? (
+                                <img
+                                    src={appSettings.logo}
+                                    alt="Logo"
+                                    className="w-8 h-8 object-contain"
+                                />
+                            ) : (
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-orange-500 to-red-600 flex items-center justify-center shrink-0">
+                                    <span className="font-bold text-white text-sm">TD</span>
+                                </div>
+                            )}
+                            <span className="text-xl font-bold tracking-tight text-gray-900 truncate">
+                                {appSettings.company_name || 'Admin'}
+                            </span>
+                        </div>
+                    )}
+
+                    {!isSidebarCollapsed && (
+                        <button
+                            onClick={() => setIsSidebarCollapsed(true)}
+                            className="ml-auto text-gray-400 hover:text-gray-600 transition-colors p-1"
+                        >
+                            <ChevronLeft size={20} />
+                        </button>
+                    )}
+                    {isSidebarCollapsed && (
+                        <button
+                            onClick={() => setIsSidebarCollapsed(false)}
+                            className="mx-auto text-gray-400 hover:text-gray-600 transition-colors p-1"
+                        >
+                            <ChevronRight size={20} />
+                        </button>
+                    )}
+                </div>
+
+                <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto custom-scrollbar">
+                    {sidebarItems.map((item, index) => (
+                        <a
+                            key={index}
+                            href="#"
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative ${item.active
+                                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                }`}
+                        >
+                            <item.icon size={20} className="shrink-0" />
+                            {!isSidebarCollapsed && <span className="font-medium text-[15px]">{item.label}</span>}
+
+                            {/* Hover tooltip for collapsed state */}
+                            {isSidebarCollapsed && (
+                                <div className="absolute left-full ml-3 px-3 py-1.5 bg-gray-800 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none transition-opacity">
+                                    {item.label}
+                                </div>
+                            )}
+
+                            {/* Active indicator dot for red theme in image 1 */}
+                            {item.active && !isSidebarCollapsed && (
+                                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/50" />
+                            )}
+                        </a>
+                    ))}
+                </nav>
+
+                {/* Logout visible at the bottom */}
+                <div className="p-4 border-t border-gray-100 mt-auto">
+                    <button
+                        onClick={handleLogout}
+                        disabled={loading}
+                        className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all duration-200 group ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                    >
+                        <LogOut size={20} className="shrink-0 group-hover:scale-110 transition-transform" />
+                        {!isSidebarCollapsed && <span className="font-medium">Logout</span>}
+                    </button>
+                </div>
+            </aside>
+
+            {/* Main Content */}
+            <main className="flex-1 flex flex-col min-w-0 bg-gray-50/50">
+                {/* Header from Image 2 */}
+                <header className="h-20 bg-white border-b border-gray-100 px-8 flex items-center justify-between shadow-sm z-10">
+                    <div className="flex items-center">
+                        <h1 className="text-2xl font-bold text-orange-600 tracking-tight">Dashboard</h1>
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                        {/* Date Picker Mock */}
+                        <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-600 shadow-sm hover:border-orange-200 transition-colors cursor-pointer">
+                            <Calendar size={16} className="text-gray-400" />
+                            <span>13/02/2025 - 24/03/2025</span>
+                        </div>
+
+                        {/* Country Selector */}
+                        <button className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-full text-sm font-semibold shadow-lg shadow-orange-600/20 transition-all active:scale-95">
+                            <span>Choose Country</span>
+                            <ChevronDown size={16} />
+                        </button>
+
+                        {/* Notification */}
+                        <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
+                            <Bell size={24} />
+                            <span className="absolute top-1.5 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
+                        </button>
+
+                        {/* User Profile */}
+                        <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
+                            <div className="text-right hidden md:block">
+                                <p className="text-sm font-bold text-gray-900 leading-none">{user.name || 'Admin'}</p>
+                                <p className="text-xs text-gray-500 mt-1">Admin Role</p>
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-gray-200 shrink-0 overflow-hidden ring-2 ring-gray-100">
+                                {/* Placeholder for user image */}
+                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-gray-500 font-bold">
+                                    {user.name ? user.name.charAt(0).toUpperCase() : 'A'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <div className="p-8 overflow-y-auto h-[calc(100vh-5rem)]">
+                    {/* Dashboard Content Grid */}
+                    {/* Dashboard Widgets */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8 h-auto">
+
+                        {/* Quick Info Card */}
+                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-orange-400 to-red-600"></div>
+                            <h3 className="font-bold text-lg mb-8 text-gray-800">Quick Info</h3>
+
+                            <div className="grid grid-cols-2 gap-6">
+                                {[
+                                    { label: 'Total Users', value: '24,847', icon: User, color: 'from-orange-500 to-red-600' },
+                                    { label: 'Eaterys', value: '4,847', icon: Utensils, color: 'from-orange-500 to-red-600' },
+                                    { label: 'Public Users', value: '14,847', icon: User, color: 'from-red-500 to-red-700' },
+                                    { label: 'Active Orders', value: '847', icon: CheckCircle, color: 'from-red-500 to-red-700' }
+                                ].map((item, index) => (
+                                    <div key={index} className="flex flex-col items-center justify-center">
+                                        <div className={`w-32 h-32 rounded-full bg-gradient-to-b ${item.color} flex flex-col items-center justify-center text-white shadow-lg shadow-orange-500/20 mb-2 transition-transform hover:scale-105`}>
+                                            <item.icon size={28} className="mb-1 opacity-90" strokeWidth={2.5} />
+                                            <span className="text-2xl font-bold tracking-tight">{item.value}</span>
+                                            <span className="text-xs font-medium opacity-90">{item.label}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Annual Overview Chart */}
+                        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 lg:col-span-2 relative h-full min-h-[400px]">
+                            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-orange-400 to-red-600" />
+
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="font-bold text-lg text-gray-800">Annual Overview</h3>
+                                <button className="flex items-center gap-2 px-4 py-1.5 bg-gray-50 rounded-full text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors">
+                                    Public <ChevronDown size={14} />
+                                </button>
+                            </div>
+
+                            <div className="h-[320px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={[
+                                        { name: 'Jan', value: 40 }, { name: 'Feb', value: 80 }, { name: 'Mar', value: 60 },
+                                        { name: 'Apr', value: 100 }, { name: 'May', value: 70 }, { name: 'Jun', value: 65 },
+                                        { name: 'Jul', value: 50 }, { name: 'Aug', value: 80 }, { name: 'Sep', value: 80 },
+                                        { name: 'Oct', value: 60 }, { name: 'Nov', value: 100 }, { name: 'Dec', value: 70 },
+                                    ]} barSize={20}>
+                                        <XAxis
+                                            dataKey="name"
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{ fill: '#6b7280', fontSize: 12, dy: 10 }}
+                                        />
+                                        <Tooltip
+                                            cursor={{ fill: 'transparent' }}
+                                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                        />
+                                        <Bar
+                                            dataKey="value"
+                                            radius={[4, 4, 4, 4]}
+                                            background={{ fill: '#f3f4f6', radius: [4, 4, 4, 4] }}
+                                        >
+                                            {Array.from({ length: 12 }).map((_, index) => (
+                                                <Cell key={`cell-${index}`} fill="url(#colorGradient)" />
+                                            ))}
+                                        </Bar>
+                                        <defs>
+                                            <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#f97316" />
+                                                <stop offset="100%" stopColor="#dc2626" />
+                                            </linearGradient>
+                                        </defs>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    );
+};
+
+export default Dashboard;

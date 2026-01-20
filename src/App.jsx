@@ -1,11 +1,42 @@
-function App() {
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900">
-      <h1 className="text-4xl font-bold text-white">
-        React + Tailwind is Ready 🚀
-      </h1>
-    </div>
-  )
+
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+
+// Simple protected route component
+const ProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('admin_token');
+  if (!token) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
+// Public route that redirects to dashboard if already logged in
+const PublicRoute = ({ children }) => {
+  const token = localStorage.getItem('admin_token');
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
 }
 
-export default App
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      {/* Catch all redirect */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+export default App;

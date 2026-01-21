@@ -13,8 +13,32 @@ const Dashboard = () => {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [activeSection, setActiveSection] = useState('Dashboard');
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [isDarkMode, setIsDarkMode] = useState(() => {
+        const savedMode = localStorage.getItem('isDarkMode');
+        return savedMode === 'true';
+    });
     const [appSettings, setAppSettings] = useState({ logo: '', company_name: '' });
     const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
+    const profileRef = React.useRef(null);
+
+    // Handle outside click to close profile dropdown
+    React.useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (profileRef.current && !profileRef.current.contains(event.target)) {
+                setIsProfileOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    // Persist Dark Mode preference
+    React.useEffect(() => {
+        localStorage.setItem('isDarkMode', isDarkMode);
+    }, [isDarkMode]);
 
     // Fetch App Settings
     React.useEffect(() => {
@@ -64,11 +88,14 @@ const Dashboard = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-white flex text-gray-800 font-sans overflow-hidden">
+        <div className={`min-h-screen flex font-sans overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-[#0f172a] text-gray-200' : 'bg-white text-gray-800'}`}>
             {/* Sidebar */}
             <aside
                 className={`${isSidebarCollapsed ? 'w-20' : 'w-64'
-                    } bg-white border-r border-gray-100 flex flex-col transition-all duration-300 ease-in-out hidden md:flex shadow-sm z-20 overflow-hidden`}
+                    } border-r flex flex-col transition-all duration-300 ease-in-out hidden md:flex shadow-sm z-20 overflow-hidden ${isDarkMode
+                        ? 'bg-[#0f172a] border-gray-800'
+                        : 'bg-white border-gray-100'
+                    }`}
             >
                 {/* Sidebar Header */}
                 <div className={`h-20 flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'justify-between px-6'}`}>
@@ -85,7 +112,7 @@ const Dashboard = () => {
                                     <span className="font-bold text-white text-sm">TD</span>
                                 </div>
                             )}
-                            <span className="text-xl font-bold tracking-tight text-gray-900 truncate">
+                            <span className={`text-xl font-bold tracking-tight truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                 {appSettings.company_name || 'Admin'}
                             </span>
                         </div>
@@ -116,7 +143,7 @@ const Dashboard = () => {
                             onClick={() => setActiveSection(item.label)}
                             className={`w-full flex items-center gap-3 py-3 rounded-xl transition-all duration-200 group relative ${isSidebarCollapsed ? 'justify-center px-0' : 'px-4'} ${activeSection === item.label
                                 ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
-                                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                : isDarkMode ? 'text-gray-400 hover:bg-gray-800 hover:text-white' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                                 }`}
                         >
                             <item.icon size={20} className="shrink-0" />
@@ -138,7 +165,7 @@ const Dashboard = () => {
                 </nav>
 
                 {/* Logout visible at the bottom */}
-                <div className="p-4 border-t border-gray-100 mt-auto">
+                <div className={`p-4 border-t mt-auto ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
                     <button
                         onClick={handleLogout}
                         disabled={loading}
@@ -151,9 +178,9 @@ const Dashboard = () => {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col min-w-0 bg-gray-50/50">
+            <main className={`flex-1 flex flex-col min-w-0 ${isDarkMode ? 'bg-[#1e293b]/30' : 'bg-gray-50/50'}`}>
                 {/* Header from Image 2 */}
-                <header className="h-20 bg-white border-b border-gray-100 px-8 flex items-center justify-between shadow-sm z-10">
+                <header className={`h-20 border-b px-8 flex items-center justify-between shadow-sm z-10 ${isDarkMode ? 'bg-[#0f172a] border-gray-800' : 'bg-white border-gray-100'}`}>
                     <div className="flex items-center">
                         <h1 className="text-2xl font-bold text-orange-600 tracking-tight">{activeSection}</h1>
                     </div>
@@ -178,13 +205,13 @@ const Dashboard = () => {
                         </button>
 
                         {/* User Profile */}
-                        <div className="relative">
+                        <div className="relative" ref={profileRef}>
                             <button
                                 onClick={() => setIsProfileOpen(!isProfileOpen)}
                                 className="flex items-center gap-3 pl-4 border-l border-gray-200 outline-none"
                             >
                                 <div className="text-right hidden md:block">
-                                    <p className="text-sm font-bold text-gray-900 leading-none">{user.name || 'Admin'}</p>
+                                    <p className={`text-sm font-bold leading-none ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user.name || 'Admin'}</p>
                                     <p className="text-xs text-gray-500 mt-1">Admin Role</p>
                                 </div>
                                 <div className="w-10 h-10 rounded-full bg-gray-200 shrink-0 overflow-hidden ring-2 ring-gray-100 transition-all hover:ring-orange-200">
@@ -198,29 +225,39 @@ const Dashboard = () => {
 
                             {/* Profile Dropdown */}
                             {isProfileOpen && (
-                                <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50">
-                                    <div className="p-6 bg-gradient-to-br from-orange-50 to-white border-b border-gray-100">
+                                <div className={`absolute right-0 top-full mt-2 w-72 rounded-2xl shadow-xl border overflow-hidden z-50 ${isDarkMode ? 'bg-[#1e293b] border-orange-500/50 shadow-orange-900/20' : 'bg-orange-50 border-orange-100'}`}>
+                                    <div className={`p-6 border-b ${isDarkMode ? 'bg-[#1e293b] border-gray-800' : 'bg-gradient-to-br from-orange-100 to-orange-50 border-orange-100'}`}>
                                         <div className="flex items-center gap-4 mb-4">
-                                            <div className="w-16 h-16 rounded-full bg-white p-1 shadow-sm ring-1 ring-gray-100">
+                                            <div className={`w-16 h-16 rounded-full p-1 shadow-sm ring-1 ${isDarkMode ? 'bg-gray-800 ring-gray-700' : 'bg-white ring-orange-100'}`}>
                                                 <div className="w-full h-full rounded-full flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-50 text-orange-600 font-bold text-2xl">
                                                     {user.name ? user.name.charAt(0).toUpperCase() : 'A'}
                                                 </div>
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-gray-900 text-lg">{user.name || 'Admin User'}</h4>
+                                                <h4 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user.name || 'Admin User'}</h4>
                                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                                                     Active
                                                 </span>
                                             </div>
                                         </div>
                                         <div className="space-y-2">
-                                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                                            <div className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                                 <User size={14} />
                                                 <span className="truncate">{user.email || 'admin@trippldee.com'}</span>
                                             </div>
-                                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                                                <span className="w-4 h-4 flex items-center justify-center text-[10px] font-bold border border-gray-400 rounded-sm">ID</span>
+                                            <div className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                <span className={`w-4 h-4 flex items-center justify-center text-[10px] font-bold border rounded-sm ${isDarkMode ? 'border-gray-600' : 'border-gray-400'}`}>ID</span>
                                                 <span className="font-mono text-xs">{user.id || 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Dark Mode Toggle */}
+                                    <div className={`px-4 py-3 border-b ${isDarkMode ? 'border-gray-800' : 'border-orange-100'}`}>
+                                        <div className="flex items-center justify-between cursor-pointer" onClick={() => setIsDarkMode(!isDarkMode)}>
+                                            <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Dark Mode</span>
+                                            <div className={`w-11 h-6 rounded-full transition-colors relative ${isDarkMode ? 'bg-orange-600' : 'bg-gray-200'}`}>
+                                                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${isDarkMode ? 'left-[26px]' : 'left-1'}`}></div>
                                             </div>
                                         </div>
                                     </div>
@@ -246,9 +283,9 @@ const Dashboard = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8 h-auto">
 
                             {/* Quick Info Card */}
-                            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
+                            <div className={`rounded-3xl p-6 shadow-sm border relative overflow-hidden ${isDarkMode ? 'bg-[#1e293b] border-gray-800' : 'bg-white border-gray-100'}`}>
                                 <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-orange-400 to-red-600"></div>
-                                <h3 className="font-bold text-lg mb-8 text-gray-800">Quick Info</h3>
+                                <h3 className={`font-bold text-lg mb-8 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Quick Info</h3>
 
                                 <div className="grid grid-cols-2 gap-6">
                                     {[
@@ -269,12 +306,12 @@ const Dashboard = () => {
                             </div>
 
                             {/* Annual Overview Chart */}
-                            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 lg:col-span-2 relative h-full min-h-[400px]">
+                            <div className={`rounded-3xl p-8 shadow-sm border lg:col-span-2 relative h-full min-h-[400px] ${isDarkMode ? 'bg-[#1e293b] border-gray-800' : 'bg-white border-gray-100'}`}>
                                 <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-orange-400 to-red-600" />
 
                                 <div className="flex justify-between items-center mb-8">
-                                    <h3 className="font-bold text-lg text-gray-800">Annual Overview</h3>
-                                    <button className="flex items-center gap-2 px-4 py-1.5 bg-gray-50 rounded-full text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors">
+                                    <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Annual Overview</h3>
+                                    <button className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
                                         Public <ChevronDown size={14} />
                                     </button>
                                 </div>
@@ -319,13 +356,13 @@ const Dashboard = () => {
                         </div>
                     ) : (
                         // Placeholder for other sections
-                        <div className="flex flex-col items-center justify-center h-96 bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center animate-pulse">
-                            <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mb-6 text-orange-500">
+                        <div className={`flex flex-col items-center justify-center h-96 rounded-3xl shadow-sm border p-8 text-center animate-pulse ${isDarkMode ? 'bg-[#1e293b] border-gray-800' : 'bg-white border-gray-100'}`}>
+                            <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 text-orange-500 ${isDarkMode ? 'bg-gray-800' : 'bg-orange-100'}`}>
                                 {sidebarItems.find(i => i.label === activeSection)?.icon &&
                                     React.createElement(sidebarItems.find(i => i.label === activeSection).icon, { size: 48 })
                                 }
                             </div>
-                            <h2 className="text-2xl font-bold text-gray-800 mb-2">{activeSection} Module</h2>
+                            <h2 className={`text-2xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{activeSection} Module</h2>
                             <p className="text-gray-500 max-w-md">The {activeSection} management interface is currently under development. Check back soon for updates!</p>
                         </div>
                     )}
@@ -359,8 +396,9 @@ const Dashboard = () => {
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 };
 

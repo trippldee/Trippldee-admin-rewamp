@@ -120,7 +120,7 @@ const Login = () => {
                                 <img src={appSettings.logo} alt="Logo" className="w-10 h-10 object-contain" />
                             ) : (
                                 <div className="flex items-center justify-center w-8 h-8 text-xs font-bold transform rounded-full bg-gradient-to-r from-orange-400 to-orange-600 -rotate-12">
-                                    🐌
+                                    
                                 </div>
                             )}
                             <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">

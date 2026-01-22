@@ -2,15 +2,18 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, LayoutDashboard, Database, Settings, User, ChevronLeft, ChevronRight, Calculator, Calendar, Bell, ChevronDown, Utensils, Cloud, FileText, CreditCard, Ticket, BarChart3, Search, CheckCircle } from 'lucide-react';
+import { LogOut, LayoutDashboard, Database, Settings, User, ChevronLeft, ChevronRight, Calculator, Calendar, Bell, ChevronDown, Utensils, Cloud, FileText, CreditCard, Ticket, BarChart3, Search, CheckCircle, Menu, X } from 'lucide-react';
+
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import toast from 'react-hot-toast';
+import RoleManagement from '../components/admin/RoleManagement';
 
 const Dashboard = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [activeSection, setActiveSection] = useState('Dashboard');
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -20,6 +23,14 @@ const Dashboard = () => {
     const [appSettings, setAppSettings] = useState({ logo: '', company_name: '' });
     const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
     const profileRef = React.useRef(null);
+    const [expandedMenus, setExpandedMenus] = useState({});
+
+    const toggleSubMenu = (label) => {
+        setExpandedMenus(prev => ({
+            ...prev,
+            [label]: !prev[label]
+        }));
+    };
 
     // Handle outside click to close profile dropdown
     React.useEffect(() => {
@@ -78,7 +89,24 @@ const Dashboard = () => {
 
     const sidebarItems = [
         { icon: LayoutDashboard, label: 'Dashboard' },
-        { icon: User, label: 'Users' },
+        {
+            icon: Settings,
+            label: 'Administration',
+            subItems: [
+                { label: 'Role Management' },
+                { label: 'User Management' }
+            ]
+        },
+        {
+            icon: User,
+            label: 'Users',
+            subItems: [
+                { label: 'Users' },
+                { label: 'Deleted Users' },
+                { label: 'Chef' },
+                { label: 'Org Users' }
+            ]
+        },
         { icon: Utensils, label: 'Restaurants' },
         { icon: Cloud, label: 'Cloud Kitchen' },
         { icon: FileText, label: 'Post List' },
@@ -89,17 +117,27 @@ const Dashboard = () => {
 
     return (
         <div className={`min-h-screen flex font-sans overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-[#0f172a] text-gray-200' : 'bg-white text-gray-800'}`}>
+            {/* Mobile Sidebar Overlay */}
+            {isMobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
             <aside
-                className={`${isSidebarCollapsed ? 'w-20' : 'w-64'
-                    } border-r flex flex-col transition-all duration-300 ease-in-out hidden md:flex shadow-sm z-20 overflow-hidden ${isDarkMode
-                        ? 'bg-[#0f172a] border-gray-800'
-                        : 'bg-white border-gray-100'
-                    }`}
+                className={`
+                    fixed md:static inset-y-0 left-0 z-40 transition-all duration-300 ease-in-out flex flex-col border-r h-full
+                    ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+                    ${isSidebarCollapsed ? 'md:w-20' : 'md:w-64'}
+                    w-64
+                    ${isDarkMode ? 'bg-[#0f172a] border-gray-800' : 'bg-white border-gray-100'}
+                `}
             >
                 {/* Sidebar Header */}
                 <div className={`h-20 flex items-center ${isSidebarCollapsed ? 'justify-center px-0' : 'justify-between px-6'}`}>
-                    {!isSidebarCollapsed && (
+                    {(!isSidebarCollapsed || isMobileMenuOpen) && (
                         <div className="flex items-center gap-2">
                             {appSettings.logo ? (
                                 <img
@@ -118,14 +156,25 @@ const Dashboard = () => {
                         </div>
                     )}
 
-                    {!isSidebarCollapsed && (
+                    <div className="ml-auto flex items-center">
+                        {/* Mobile Close Button */}
                         <button
-                            onClick={() => setIsSidebarCollapsed(true)}
-                            className="ml-auto text-gray-400 hover:text-gray-600 transition-colors p-1"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className="md:hidden text-gray-400 hover:text-gray-600 transition-colors p-1"
                         >
-                            <ChevronLeft size={20} />
+                            <X size={20} />
                         </button>
-                    )}
+
+                        {/* Desktop Collapse Button */}
+                        {!isSidebarCollapsed && (
+                            <button
+                                onClick={() => setIsSidebarCollapsed(true)}
+                                className="hidden md:block text-gray-400 hover:text-gray-600 transition-colors p-1"
+                            >
+                                <ChevronLeft size={20} />
+                            </button>
+                        )}
+                    </div>
                     {isSidebarCollapsed && (
                         <button
                             onClick={() => setIsSidebarCollapsed(false)}
@@ -138,29 +187,72 @@ const Dashboard = () => {
 
                 <nav className={`flex-1 space-y-1 overflow-y-auto overflow-x-hidden custom-scrollbar ${isSidebarCollapsed ? 'px-2 py-2' : 'px-4 py-2'}`}>
                     {sidebarItems.map((item, index) => (
-                        <button
-                            key={index}
-                            onClick={() => setActiveSection(item.label)}
-                            className={`w-full flex items-center gap-3 py-3 rounded-xl transition-all duration-200 group relative ${isSidebarCollapsed ? 'justify-center px-0' : 'px-4'} ${activeSection === item.label
-                                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
-                                : isDarkMode ? 'text-gray-400 hover:bg-gray-800 hover:text-white' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-                                }`}
-                        >
-                            <item.icon size={20} className="shrink-0" />
-                            {!isSidebarCollapsed && <span className="font-medium text-[15px]">{item.label}</span>}
+                        <React.Fragment key={index}>
+                            <button
+                                onClick={() => {
+                                    if (item.subItems) {
+                                        toggleSubMenu(item.label);
+                                        if (isSidebarCollapsed) setIsSidebarCollapsed(false);
+                                    } else {
+                                        setActiveSection(item.label);
+                                    }
+                                }}
+                                className={`w-full flex items-center gap-3 py-3 rounded-xl transition-all duration-200 group relative ${isSidebarCollapsed ? 'justify-center px-0' : 'px-4'} ${activeSection === item.label
+                                    ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                                    : isDarkMode ? 'text-gray-400 hover:bg-gray-800 hover:text-white' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                    }`}
+                            >
+                                <item.icon size={20} className="shrink-0" />
+                                {(!isSidebarCollapsed || isMobileMenuOpen) && (
+                                    <>
+                                        <span className="font-medium text-[15px] flex-1 text-left">{item.label}</span>
+                                        {item.subItems && (
+                                            <ChevronDown
+                                                size={16}
+                                                className={`transition-transform duration-200 ${expandedMenus[item.label] ? 'rotate-180' : ''}`}
+                                            />
+                                        )}
+                                    </>
+                                )}
 
-                            {/* Hover tooltip for collapsed state */}
-                            {isSidebarCollapsed && (
-                                <div className="absolute left-full ml-3 px-3 py-1.5 bg-gray-800 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none transition-opacity">
-                                    {item.label}
+                                {/* Hover tooltip for collapsed state */}
+                                {isSidebarCollapsed && (
+                                    <div className="absolute left-full ml-3 px-3 py-1.5 bg-gray-800 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none transition-opacity">
+                                        {item.label}
+                                    </div>
+                                )}
+
+                                {/* Active indicator dot for red theme in image 1 */}
+                                {activeSection === item.label && (!isSidebarCollapsed || isMobileMenuOpen) && !item.subItems && (
+                                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/50" />
+                                )}
+                            </button>
+
+                            {/* Sub Items */}
+                            {(!isSidebarCollapsed || isMobileMenuOpen) && item.subItems && expandedMenus[item.label] && (
+                                <div className="ml-10 space-y-1 relative">
+                                    {/* Vertical line connector */}
+                                    <div className={`absolute left-0 top-0 bottom-0 w-px ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} -ml-4`}></div>
+
+                                    {item.subItems.map((subItem, subIndex) => (
+                                        <button
+                                            key={subIndex}
+                                            onClick={() => setActiveSection(subItem.label)}
+                                            className={`w-full flex items-center gap-2 py-2 px-2 text-sm transition-colors rounded-lg relative ${activeSection === subItem.label
+                                                ? 'text-orange-600 bg-orange-50 font-medium'
+                                                : isDarkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            {activeSection === subItem.label && (
+                                                <span className="absolute left-0 top-1/2 -translate-y-1/2 -ml-[18px] w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                                            )}
+                                            <span className="text-lg leading-none select-none opacity-50">›</span>
+                                            {subItem.label}
+                                        </button>
+                                    ))}
                                 </div>
                             )}
-
-                            {/* Active indicator dot for red theme in image 1 */}
-                            {activeSection === item.label && !isSidebarCollapsed && (
-                                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/50" />
-                            )}
-                        </button>
+                        </React.Fragment>
                     ))}
                 </nav>
 
@@ -172,7 +264,7 @@ const Dashboard = () => {
                         className={`flex items-center gap-3 w-full py-3 rounded-xl text-gray-500 hover:bg-red-50 hover:text-red-500 transition-all duration-200 group ${isSidebarCollapsed ? 'justify-center px-0' : 'px-4'}`}
                     >
                         <LogOut size={20} className="shrink-0 group-hover:scale-110 transition-transform" />
-                        {!isSidebarCollapsed && <span className="font-medium">Logout</span>}
+                        {(!isSidebarCollapsed || isMobileMenuOpen) && <span className="font-medium">Logout</span>}
                     </button>
                 </div>
             </aside>
@@ -180,9 +272,15 @@ const Dashboard = () => {
             {/* Main Content */}
             <main className={`flex-1 flex flex-col min-w-0 ${isDarkMode ? 'bg-[#1e293b]/30' : 'bg-gray-50/50'}`}>
                 {/* Header from Image 2 */}
-                <header className={`h-20 border-b px-8 flex items-center justify-between shadow-sm z-10 ${isDarkMode ? 'bg-[#0f172a] border-gray-800' : 'bg-white border-gray-100'}`}>
-                    <div className="flex items-center">
-                        <h1 className="text-2xl font-bold text-orange-600 tracking-tight">{activeSection}</h1>
+                <header className={`h-16 md:h-20 border-b px-4 md:px-8 flex items-center justify-between shadow-sm z-10 ${isDarkMode ? 'bg-[#0f172a] border-gray-800' : 'bg-white border-gray-100'}`}>
+                    <div className="flex items-center gap-3 md:gap-4">
+                        <button
+                            onClick={() => setIsMobileMenuOpen(true)}
+                            className="md:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-400 rounded-lg transition-colors"
+                        >
+                            <Menu size={24} />
+                        </button>
+                        <h1 className="text-xl md:text-2xl font-bold text-orange-600 tracking-tight truncate">{activeSection}</h1>
                     </div>
 
                     <div className="flex items-center gap-6">
@@ -277,10 +375,10 @@ const Dashboard = () => {
                     </div>
                 </header>
 
-                <div className="p-8 overflow-y-auto h-[calc(100vh-5rem)]">
+                <div className="p-4 md:p-8 overflow-y-auto h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)]">
                     {/* Dashboard Content Grid */}
                     {activeSection === 'Dashboard' ? (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8 h-auto">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 mb-8 h-auto">
 
                             {/* Quick Info Card */}
                             <div className={`rounded-3xl p-6 shadow-sm border relative overflow-hidden ${isDarkMode ? 'bg-[#1e293b] border-gray-800' : 'bg-white border-gray-100'}`}>
@@ -317,7 +415,7 @@ const Dashboard = () => {
                                 </div>
 
                                 <div className="h-[320px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                                         <BarChart data={[
                                             { name: 'Jan', value: 40 }, { name: 'Feb', value: 80 }, { name: 'Mar', value: 60 },
                                             { name: 'Apr', value: 100 }, { name: 'May', value: 70 }, { name: 'Jun', value: 65 },
@@ -354,12 +452,14 @@ const Dashboard = () => {
                                 </div>
                             </div>
                         </div>
+                    ) : activeSection === 'Role Management' ? (
+                        <RoleManagement />
                     ) : (
                         // Placeholder for other sections
                         <div className={`flex flex-col items-center justify-center h-96 rounded-3xl shadow-sm border p-8 text-center animate-pulse ${isDarkMode ? 'bg-[#1e293b] border-gray-800' : 'bg-white border-gray-100'}`}>
                             <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 text-orange-500 ${isDarkMode ? 'bg-gray-800' : 'bg-orange-100'}`}>
-                                {sidebarItems.find(i => i.label === activeSection)?.icon &&
-                                    React.createElement(sidebarItems.find(i => i.label === activeSection).icon, { size: 48 })
+                                {sidebarItems.find(i => i.label === activeSection || i.subItems?.some(s => s.label === activeSection))?.icon &&
+                                    React.createElement(sidebarItems.find(i => i.label === activeSection || i.subItems?.some(s => s.label === activeSection)).icon, { size: 48 })
                                 }
                             </div>
                             <h2 className={`text-2xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{activeSection} Module</h2>
@@ -367,36 +467,37 @@ const Dashboard = () => {
                         </div>
                     )}
                 </div>
-            </main>
+            </main >
 
             {/* Logout Confirmation Modal */}
-            {showLogoutConfirm && (
-                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 opacity-100">
-                        <div className="p-6 text-center">
-                            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
-                                <LogOut size={24} />
-                            </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2">Sign Out</h3>
-                            <p className="text-gray-500 mb-6">Are you sure you want to sign out? You will need to sign in again to access the dashboard.</p>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowLogoutConfirm(false)}
-                                    className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={confirmLogout}
-                                    className="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
-                                >
-                                    Yes, Sign Out
-                                </button>
+            {
+                showLogoutConfirm && (
+                    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 opacity-100">
+                            <div className="p-6 text-center">
+                                <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+                                    <LogOut size={24} />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">Sign Out</h3>
+                                <p className="text-gray-500 mb-6">Are you sure you want to sign out? You will need to sign in again to access the dashboard.</p>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setShowLogoutConfirm(false)}
+                                        className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={confirmLogout}
+                                        className="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
+                                    >
+                                        Yes, Sign Out
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )
+                )
             }
         </div >
     );

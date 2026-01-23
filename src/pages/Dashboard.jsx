@@ -2,11 +2,24 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, LayoutDashboard, Database, Settings, User, ChevronLeft, ChevronRight, Calculator, Calendar, Bell, ChevronDown, Utensils, Cloud, FileText, CreditCard, Ticket, BarChart3, Search, CheckCircle, Menu, X } from 'lucide-react';
+import { LogOut, LayoutDashboard, Database, Settings, User, ChevronLeft, ChevronRight, Calculator, Calendar, Bell, ChevronDown, Utensils, Cloud, FileText, CreditCard, Ticket, BarChart3, Search, CheckCircle, Menu, X, Scale, ChefHat, Tag } from 'lucide-react';
 
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import toast from 'react-hot-toast';
 import RoleManagement from '../components/admin/RoleManagement';
+import BMI from '../components/admin/BMI';
+import UserManagement from '../components/admin/UserManagement';
+import PermissionManagement from '../components/admin/PermissionManagement';
+import QuickInfo from '../components/dashboard/QuickInfo';
+import AnnualOverview from '../components/dashboard/AnnualOverview';
+import PerformanceCard from '../components/dashboard/PerformanceCard';
+import RevenueCards from '../components/dashboard/RevenueCards';
+import Notifications from '../components/dashboard/Notifications';
+import RecentActivity from '../components/dashboard/RecentActivity';
+import PostManagement from '../components/admin/PostManagement';
+import RecipeManagement from '../components/admin/RecipeManagement';
+import OfferManagement from '../components/admin/OfferManagement';
+import SubscriptionPlans from '../components/admin/SubscriptionPlans';
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -18,7 +31,8 @@ const Dashboard = () => {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(() => {
         const savedMode = localStorage.getItem('isDarkMode');
-        return savedMode === 'true';
+        // Default to true if not set (null), otherwise respect the saved value
+        return savedMode !== 'false';
     });
     const [appSettings, setAppSettings] = useState({ logo: '', company_name: '' });
     const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
@@ -94,7 +108,7 @@ const Dashboard = () => {
             label: 'Administration',
             subItems: [
                 { label: 'Role Management' },
-                { label: 'User Management' }
+                { label: 'Permission Management' }
             ]
         },
         {
@@ -103,20 +117,28 @@ const Dashboard = () => {
             subItems: [
                 { label: 'Users' },
                 { label: 'Deleted Users' },
-                { label: 'Chef' },
-                { label: 'Org Users' }
+                { label: 'Chef' }
             ]
         },
         { icon: Utensils, label: 'Restaurants' },
+        { icon: Tag, label: 'Eatery Offers' },
         { icon: Cloud, label: 'Cloud Kitchen' },
-        { icon: FileText, label: 'Post List' },
-        { icon: CreditCard, label: 'Subscription' },
+        { icon: FileText, label: 'Post Management' },
+        { icon: ChefHat, label: 'Recipe Management' },
+        {
+            icon: CreditCard,
+            label: 'Subscription',
+            subItems: [
+                { label: 'Plans' }
+            ]
+        },
         { icon: Ticket, label: 'Tickets' },
         { icon: BarChart3, label: 'Analytics' },
+        { icon: Scale, label: 'BMI' },
     ];
 
     return (
-        <div className={`min-h-screen flex font-sans overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-[#0f172a] text-gray-200' : 'bg-white text-gray-800'}`}>
+        <div className={`min-h-screen flex font-sans overflow-hidden transition-colors duration-300 ${isDarkMode ? 'dark bg-[#0f172a] text-gray-200' : 'bg-white text-gray-800'}`}>
             {/* Mobile Sidebar Overlay */}
             {isMobileMenuOpen && (
                 <div
@@ -377,83 +399,56 @@ const Dashboard = () => {
 
                 <div className="p-4 md:p-8 overflow-y-auto h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)]">
                     {/* Dashboard Content Grid */}
+
                     {activeSection === 'Dashboard' ? (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 mb-8 h-auto">
-
-                            {/* Quick Info Card */}
-                            <div className={`rounded-3xl p-6 shadow-sm border relative overflow-hidden ${isDarkMode ? 'bg-[#1e293b] border-gray-800' : 'bg-white border-gray-100'}`}>
-                                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-orange-400 to-red-600"></div>
-                                <h3 className={`font-bold text-lg mb-8 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Quick Info</h3>
-
-                                <div className="grid grid-cols-2 gap-6">
-                                    {[
-                                        { label: 'Total Users', value: '24,847', icon: User, color: 'from-orange-500 to-red-600' },
-                                        { label: 'Eaterys', value: '4,847', icon: Utensils, color: 'from-orange-500 to-red-600' },
-                                        { label: 'Public Users', value: '14,847', icon: User, color: 'from-red-500 to-red-700' },
-                                        { label: 'Active Orders', value: '847', icon: CheckCircle, color: 'from-red-500 to-red-700' }
-                                    ].map((item, index) => (
-                                        <div key={index} className="flex flex-col items-center justify-center">
-                                            <div className={`w-32 h-32 rounded-full bg-gradient-to-b ${item.color} flex flex-col items-center justify-center text-white shadow-lg shadow-orange-500/20 mb-2 transition-transform hover:scale-105`}>
-                                                <item.icon size={28} className="mb-1 opacity-90" strokeWidth={2.5} />
-                                                <span className="text-2xl font-bold tracking-tight">{item.value}</span>
-                                                <span className="text-xs font-medium opacity-90">{item.label}</span>
-                                            </div>
-                                        </div>
-                                    ))}
+                        <div className="space-y-6 max-w-[1600px] mx-auto">
+                            {/* Top Section: Quick Info & Annual Overview */}
+                            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                                <div className="xl:col-span-1 h-full">
+                                    <QuickInfo />
+                                </div>
+                                <div className="xl:col-span-2 h-full">
+                                    <AnnualOverview />
                                 </div>
                             </div>
 
-                            {/* Annual Overview Chart */}
-                            <div className={`rounded-3xl p-8 shadow-sm border lg:col-span-2 relative h-full min-h-[400px] ${isDarkMode ? 'bg-[#1e293b] border-gray-800' : 'bg-white border-gray-100'}`}>
-                                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-orange-400 to-red-600" />
-
-                                <div className="flex justify-between items-center mb-8">
-                                    <h3 className={`font-bold text-lg ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Annual Overview</h3>
-                                    <button className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold transition-colors ${isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
-                                        Public <ChevronDown size={14} />
-                                    </button>
+                            {/* Middle Section: Performance & Side Panel */}
+                            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                                {/* Left Column (Performance & Activity) */}
+                                <div className="xl:col-span-2 space-y-6">
+                                    <PerformanceCard title="Cloud Kitchen Performance" type="cloud" />
+                                    <PerformanceCard title="Restaurant Performance" type="restaurant" />
+                                    <RecentActivity />
                                 </div>
 
-                                <div className="h-[320px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                                        <BarChart data={[
-                                            { name: 'Jan', value: 40 }, { name: 'Feb', value: 80 }, { name: 'Mar', value: 60 },
-                                            { name: 'Apr', value: 100 }, { name: 'May', value: 70 }, { name: 'Jun', value: 65 },
-                                            { name: 'Jul', value: 50 }, { name: 'Aug', value: 80 }, { name: 'Sep', value: 80 },
-                                            { name: 'Oct', value: 60 }, { name: 'Nov', value: 100 }, { name: 'Dec', value: 70 },
-                                        ]} barSize={20}>
-                                            <XAxis
-                                                dataKey="name"
-                                                axisLine={false}
-                                                tickLine={false}
-                                                tick={{ fill: '#6b7280', fontSize: 12, dy: 10 }}
-                                            />
-                                            <Tooltip
-                                                cursor={{ fill: 'transparent' }}
-                                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                            />
-                                            <Bar
-                                                dataKey="value"
-                                                radius={[4, 4, 4, 4]}
-                                                background={{ fill: '#f3f4f6', radius: [4, 4, 4, 4] }}
-                                            >
-                                                {Array.from({ length: 12 }).map((_, index) => (
-                                                    <Cell key={`cell-${index}`} fill="url(#colorGradient)" />
-                                                ))}
-                                            </Bar>
-                                            <defs>
-                                                <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="0%" stopColor="#f97316" />
-                                                    <stop offset="100%" stopColor="#dc2626" />
-                                                </linearGradient>
-                                            </defs>
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                                {/* Right Column (Revenue & Notifications) */}
+                                <div className="xl:col-span-1 space-y-6">
+                                    <RevenueCards />
+                                    <Notifications />
                                 </div>
                             </div>
                         </div>
+
                     ) : activeSection === 'Role Management' ? (
                         <RoleManagement />
+                    ) : activeSection === 'User Management' ? (
+                        <UserManagement />
+                    ) : activeSection === 'Users' ? (
+                        <UserManagement viewMode="users" />
+                    ) : activeSection === 'Deleted Users' ? (
+                        <UserManagement viewMode="deleted" />
+                    ) : activeSection === 'Permission Management' ? (
+                        <PermissionManagement />
+                    ) : activeSection === 'BMI' ? (
+                        <BMI />
+                    ) : activeSection === 'Post Management' ? (
+                        <PostManagement />
+                    ) : activeSection === 'Recipe Management' ? (
+                        <RecipeManagement />
+                    ) : activeSection === 'Eatery Offers' ? (
+                        <OfferManagement />
+                    ) : activeSection === 'Plans' ? (
+                        <SubscriptionPlans />
                     ) : (
                         // Placeholder for other sections
                         <div className={`flex flex-col items-center justify-center h-96 rounded-3xl shadow-sm border p-8 text-center animate-pulse ${isDarkMode ? 'bg-[#1e293b] border-gray-800' : 'bg-white border-gray-100'}`}>

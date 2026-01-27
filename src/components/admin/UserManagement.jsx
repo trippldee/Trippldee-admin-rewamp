@@ -31,13 +31,18 @@ const UserManagement = ({ viewMode }) => {
 
     // For Modals
     const [userToDelete, setUserToDelete] = useState(null);
+    const [userToRestore, setUserToRestore] = useState(null);
     // const [userToEdit, setUserToEdit] = useState(null); // Assuming Edit implemented later or basic
 
     const fetchUsers = async (page = 1) => {
         setLoading(true);
         try {
             const token = localStorage.getItem('admin_token');
-            const response = await axios.get(`https://test.trippldee.com/next/api/admin-web-users/get-all-users`, {
+            const endpoint = activeTab === 'deleted'
+                ? 'https://test.trippldee.com/next/api/admin-web-users/get-deleted-users'
+                : 'https://test.trippldee.com/next/api/admin-web-users/get-all-users';
+
+            const response = await axios.get(endpoint, {
                 params: {
                     page: page,
                     account_type_alias: accountType,
@@ -117,6 +122,36 @@ const UserManagement = ({ viewMode }) => {
         } catch (error) {
             console.error('Delete error:', error);
             toast.error('Error deleting user');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRestoreClick = (user) => {
+        setUserToRestore(user);
+    };
+
+    const confirmRestore = async () => {
+        if (!userToRestore) return;
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('admin_token');
+            const response = await axios.post('https://test.trippldee.com/next/api/admin-web-users/restore/user', {
+                user_referral_code: userToRestore.referral_code
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (response.data.success || response.data.status) {
+                toast.success('User restored successfully');
+                setUserToRestore(null);
+                fetchUsers(pagination.current_page);
+            } else {
+                toast.error(response.data.message || 'Failed to restore user');
+            }
+        } catch (error) {
+            console.error('Restore error:', error);
+            toast.error('Error restoring user');
         } finally {
             setLoading(false);
         }
@@ -297,8 +332,9 @@ const UserManagement = ({ viewMode }) => {
 
                                                         {activeTab === 'deleted' ? (
                                                             <button
+                                                                onClick={() => handleRestoreClick(user)}
                                                                 className="p-1.5 text-blue-500 rounded hover:bg-blue-50 hover:text-blue-600 transition dark:hover:bg-blue-900/20"
-                                                                title="Restore (Not Implemented)"
+                                                                title="Restore User"
                                                             >
                                                                 <RotateCcw size={16} />
                                                             </button>
@@ -373,6 +409,37 @@ const UserManagement = ({ viewMode }) => {
                                     className="flex-1 px-4 py-2 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20"
                                 >
                                     {loading ? 'Deleting...' : 'Delete User'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Restore Modal */}
+            {userToRestore && (
+                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden dark:bg-slate-900 dark:border dark:border-gray-800 animate-in fade-in zoom-in duration-200">
+                        <div className="p-6 text-center">
+                            <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-4 dark:bg-blue-900/30 dark:text-blue-500">
+                                <RotateCcw size={24} />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2 dark:text-white">Restore User</h3>
+                            <p className="text-gray-500 mb-6 dark:text-gray-400 text-sm">
+                                Are you sure you want to restore <span className="font-bold text-gray-900 dark:text-white">{userToRestore.name}</span>?
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setUserToRestore(null)}
+                                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmRestore}
+                                    className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
+                                >
+                                    {loading ? 'Restoring...' : 'Restore User'}
                                 </button>
                             </div>
                         </div>

@@ -20,6 +20,7 @@ import PostManagement from '../components/admin/PostManagement';
 import RecipeManagement from '../components/admin/RecipeManagement';
 import OfferManagement from '../components/admin/OfferManagement';
 import SubscriptionPlans from '../components/admin/SubscriptionPlans';
+import AdminWebUser from '../components/admin/AdminWebUser';
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -116,7 +117,7 @@ const Dashboard = () => {
             label: 'Users',
             subItems: [
                 { label: 'Users' },
-                { label: 'Deleted Users' },
+                { label: 'Admin Web User' },
                 { label: 'Chef' }
             ]
         },
@@ -437,6 +438,8 @@ const Dashboard = () => {
                         <UserManagement viewMode="users" />
                     ) : activeSection === 'Deleted Users' ? (
                         <UserManagement viewMode="deleted" />
+                    ) : activeSection === 'Admin Web User' ? (
+                        <AdminWebUser />
                     ) : activeSection === 'Permission Management' ? (
                         <PermissionManagement />
                     ) : activeSection === 'BMI' ? (

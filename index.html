@@ -3,9 +3,33 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" id="favicon" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Panel - Trippldee</title>
+  <title id="page-title">Admin Panel - Yummy Lovers</title>
+  
+  <script>
+    // Fetch app settings and update favicon and title
+    fetch('https://test.trippldee.com/next/api/app/settings')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const settings = data.data;
+          
+          // Update favicon
+          if (settings.logo) {
+            const favicon = document.getElementById('favicon');
+            favicon.href = settings.logo;
+            favicon.type = 'image/png';
+          }
+          
+          // Update title
+          if (settings.company_name) {
+            document.getElementById('page-title').textContent = `Admin Panel - ${settings.company_name}`;
+          }
+        }
+      })
+      .catch(error => console.error('Failed to fetch app settings:', error));
+  </script>
 </head>
 
 <body>

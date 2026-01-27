@@ -34,6 +34,7 @@ const PermissionManagement = () => {
 
     const [formData, setFormData] = useState({
         id: null,
+        alias: null,
         name: '',
         description: '',
         permission_for: '',
@@ -86,6 +87,7 @@ const PermissionManagement = () => {
 
                 setFormData({
                     id: perm.id,
+                    alias: perm.alias,
                     name: perm.name,
                     description: perm.description || '',
                     permission_for: perm.permission_for || perm.alias || '', // Fallback if not provided
@@ -126,6 +128,7 @@ const PermissionManagement = () => {
     const handleCreateClick = () => {
         setFormData({
             id: null,
+            alias: null,
             name: '',
             description: '',
             permission_for: '',
@@ -137,7 +140,17 @@ const PermissionManagement = () => {
     };
 
     const handleEditClick = (permission) => {
-        fetchPermissionDetails(permission.alias);
+        setFormData({
+            id: permission.id,
+            alias: permission.alias,
+            name: permission.name,
+            description: permission.description || '',
+            permission_for: permission.permission_for || permission.alias || '',
+            action: permission.action || [],
+            is_active: permission.is_active
+        });
+        setFormMode('edit');
+        setActiveTab('form');
     };
 
     const handleDeleteClick = (permission) => {
@@ -187,9 +200,12 @@ const PermissionManagement = () => {
                 description: formData.description,
                 permission_for: formData.permission_for,
                 action: formData.action,
-                is_active: formData.is_active,
-                ...(formMode === 'edit' && { permission_id: formData.id })
+                is_active: formData.is_active
             };
+
+            if (formMode === 'edit' && formData.alias) {
+                payload.permission_alias = formData.alias;
+            }
 
             const response = await axios.post('https://test.trippldee.com/next/api/admin-roles-permissions/create-or-update-permission', payload, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -201,6 +217,7 @@ const PermissionManagement = () => {
                 setActiveTab('list');
                 setFormData({
                     id: null,
+                    alias: null,
                     name: '',
                     description: '',
                     permission_for: '',
@@ -237,7 +254,7 @@ const PermissionManagement = () => {
             <div className="border-b px-4 pt-4 md:px-6 md:pt-6 flex gap-8 dark:border-gray-800 overflow-x-auto">
                 <button
                     onClick={() => setActiveTab('list')}
-                    className={`pb-4 text-sm font-semibold transition-colors relative ${activeTab === 'list'
+                    className={`pb-4 text-sm font-medium transition-colors relative ${activeTab === 'list'
                         ? 'text-red-600'
                         : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                         }`}
@@ -249,7 +266,7 @@ const PermissionManagement = () => {
                 </button>
                 <button
                     onClick={handleCreateClick}
-                    className={`pb-4 text-sm font-semibold transition-colors relative ${activeTab === 'form'
+                    className={`pb-4 text-sm font-medium transition-colors relative ${activeTab === 'form'
                         ? 'text-red-600'
                         : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                         }`}
@@ -520,7 +537,7 @@ const PermissionManagement = () => {
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 mb-2 dark:text-white">Delete Permission</h3>
                             <p className="text-gray-500 mb-6 dark:text-gray-400">
-                                Are you sure you want to delete <span className="font-semibold text-gray-900 dark:text-white">"{permissionToDelete.name}"</span>?
+                                Are you sure you want to delete the permission <span className="font-semibold text-gray-900 dark:text-white">"{permissionToDelete.name}"</span>? This action cannot be undone.
                             </p>
                             <div className="flex gap-3">
                                 <button

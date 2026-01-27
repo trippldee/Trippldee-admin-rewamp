@@ -12,7 +12,8 @@ import {
     FileSpreadsheet,
     FileText,
     Copy,
-    Columns
+    Columns,
+    X
 } from 'lucide-react';
 
 const RoleManagement = () => {
@@ -33,6 +34,12 @@ const RoleManagement = () => {
         description: '',
         permissions: []
     });
+    const [editingRoleAlias, setEditingRoleAlias] = useState(null);
+
+    // View Modal State
+    const [viewRole, setViewRole] = useState(null);
+    const [showViewModal, setShowViewModal] = useState(false);
+    const [viewLoading, setViewLoading] = useState(false);
 
     useEffect(() => {
         if (activeTab === 'new') {
@@ -40,15 +47,16 @@ const RoleManagement = () => {
                 setLoading(true);
                 try {
                     const token = localStorage.getItem('admin_token');
-                    const response = await axios.get('https://test.trippldee.com/next/api/admin-roles-permissions/admin/role', {
+                    const response = await axios.get('https://test.trippldee.com/next/api/admin-roles-permissions/list-permissions', {
                         headers: { Authorization: `Bearer ${token}` }
                     });
-                    if (response.data.success) {
-                        const perms = response.data.data?.permissions;
+                    if (response.data.status) { // Check for status true as per GET response
+                        // The response structure is { data: [...], ... } based on user input
+                        const perms = response.data.data;
                         if (Array.isArray(perms)) {
                             setAvailablePermissions(perms);
                         } else {
-                            console.error('Permissions data is not an array:', response.data.data);
+                            console.error('Permissions data is not an array:', response.data);
                         }
                     }
                 } catch (error) {
@@ -120,13 +128,34 @@ const RoleManagement = () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('admin_token');
-            const response = await axios.post('https://test.trippldee.com/next/api/admin-roles-permissions/create-or-update-role', roleForm, {
+
+            // Map permissions to include alias as required by the API
+            const formattedPermissions = roleForm.permissions.map(p => {
+                const permDetails = availablePermissions.find(ap => ap.id === p.id);
+                return {
+                    alias: permDetails?.alias,
+                    action: p.action
+                };
+            }).filter(p => p.alias);
+
+            const payload = {
+                ...roleForm,
+                permissions: formattedPermissions
+            };
+
+            if (editingRoleAlias) {
+                payload.role_alias = editingRoleAlias;
+            }
+
+            const response = await axios.post('https://test.trippldee.com/next/api/admin-roles-permissions/create-or-update-role', payload, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (response.data.success) {
-                toast.success(response.data.message || 'Role created successfully!');
+                toast.success(response.data.message || (editingRoleAlias ? 'Role updated successfully!' : 'Role created successfully!'));
                 setRoleForm({ name: '', description: '', permissions: [] });
+                setEditingRoleAlias(null);
                 setActiveTab('list');
+                fetchRoles(); // Refresh the list after creation
             } else {
                 toast.error(response.data.message || 'Failed to create role');
             }
@@ -140,6 +169,87 @@ const RoleManagement = () => {
 
     const handleDeleteClick = (role) => {
         setRoleToDelete(role);
+    };
+
+    const handleEditClick = async (role) => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('admin_token');
+            if (!role.alias) {
+                toast.error('Cannot edit role: Alias missing');
+                return;
+            }
+
+            // Fetch full details to get current permissions
+            const response = await axios.get(`https://test.trippldee.com/next/api/admin-roles-permissions/${role.alias}/role`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                const roleData = response.data.data;
+                // Map permissions from API format back to form format { id, action: [] }
+                // API perm: { id, name, alias, action: [...] }
+                // Form perm: { id, action: [...] }
+                const formPermissions = (roleData.permissions || []).map(p => ({
+                    id: p.id,
+                    action: p.action || []
+                }));
+
+                setRoleForm({
+                    name: roleData.name,
+                    description: roleData.description,
+                    permissions: formPermissions
+                });
+                setEditingRoleAlias(roleData.alias);
+                setActiveTab('new');
+            } else {
+                toast.error('Failed to fetch role details for editing');
+            }
+        } catch (error) {
+            console.error('Error fetching role for edit:', error);
+            toast.error('Error loading role details');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleViewClick = async (role) => {
+        setShowViewModal(true);
+        setViewLoading(true);
+        setViewRole(null); // Reset content
+        try {
+            const token = localStorage.getItem('admin_token');
+            // Assuming alias is present on the role object from the list.
+            // If alias is missing, we might need to fallback or error, but based on requirements alias is key.
+            if (!role.alias) {
+                toast.error('Role alias missing, cannot fetch details');
+                setShowViewModal(false);
+                return;
+            }
+
+            const response = await axios.get(`https://test.trippldee.com/next/api/admin-roles-permissions/${role.alias}/role`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            if (response.data.success) {
+                setViewRole(response.data.data);
+            } else {
+                toast.error(response.data.message || 'Failed to fetch role details');
+                setShowViewModal(false);
+            }
+        } catch (error) {
+            console.error('Error fetching role details:', error);
+            if (error.response && error.response.status === 401) {
+                toast.error('Session expired. Please login again.');
+            } else {
+                toast.error('Error loading role details');
+            }
+            setShowViewModal(false);
+        } finally {
+            setViewLoading(false);
+        }
     };
 
     const confirmDelete = async () => {
@@ -240,13 +350,17 @@ const RoleManagement = () => {
                     )}
                 </button>
                 <button
-                    onClick={() => setActiveTab('new')}
+                    onClick={() => {
+                        setActiveTab('new');
+                        setEditingRoleAlias(null);
+                        setRoleForm({ name: '', description: '', permissions: [] });
+                    }}
                     className={`pb-4 text-sm font-semibold transition-colors relative ${activeTab === 'new'
                         ? 'text-red-600'
                         : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                         }`}
                 >
-                    New Role
+                    {editingRoleAlias ? 'Edit Role' : 'New Role'}
                     {activeTab === 'new' && (
                         <div className="absolute bottom-0 left-0 w-full h-0.5 bg-red-600 rounded-t-full" />
                     )}
@@ -358,13 +472,18 @@ const RoleManagement = () => {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center justify-center gap-3">
-                                                        <button className="text-gray-400 hover:text-blue-500 transition-colors" title="View Permissions">
-                                                            <Key size={16} />
-                                                        </button>
-                                                        <button className="text-green-500 hover:text-green-600 transition-colors" title="View Details">
+                                                        <button
+                                                            onClick={() => handleViewClick(role)}
+                                                            className="text-green-500 hover:text-green-600 transition-colors"
+                                                            title="View Details"
+                                                        >
                                                             <Eye size={16} />
                                                         </button>
-                                                        <button className="text-blue-500 hover:text-blue-600 transition-colors" title="Edit">
+                                                        <button
+                                                            onClick={() => handleEditClick(role)}
+                                                            className="text-blue-500 hover:text-blue-600 transition-colors"
+                                                            title="Edit"
+                                                        >
                                                             <Edit size={16} />
                                                         </button>
                                                         <button
@@ -427,9 +546,13 @@ const RoleManagement = () => {
                     <div className="max-w-4xl mx-auto space-y-8 pb-12">
                         {/* Header */}
                         <div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Create New Role</h3>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                                {editingRoleAlias ? `Edit Role: ${roleForm.name}` : 'Create New Role'}
+                            </h3>
                             <p className="text-gray-500 dark:text-gray-400 text-sm">
-                                Define the role details and assign permissions to control access levels.
+                                {editingRoleAlias
+                                    ? 'Update the role details and modify permission assignments.'
+                                    : 'Define the role details and assign permissions to control access levels.'}
                             </p>
                         </div>
 
@@ -492,12 +615,12 @@ const RoleManagement = () => {
                                                             onClick={() => {
                                                                 const token = localStorage.getItem('admin_token');
                                                                 setLoading(true);
-                                                                axios.get('https://test.trippldee.com/next/api/admin-roles-permissions/admin/role', {
+                                                                axios.get('https://test.trippldee.com/next/api/admin-roles-permissions/list-permissions', {
                                                                     headers: { Authorization: `Bearer ${token}` }
                                                                 })
                                                                     .then(response => {
-                                                                        if (response.data.success) {
-                                                                            const perms = response.data.data?.permissions;
+                                                                        if (response.data.status) {
+                                                                            const perms = response.data.data;
                                                                             if (Array.isArray(perms)) setAvailablePermissions(perms);
                                                                         }
                                                                     })
@@ -570,6 +693,7 @@ const RoleManagement = () => {
                             <button
                                 onClick={() => {
                                     setRoleForm({ name: '', description: '', permissions: [] });
+                                    setEditingRoleAlias(null);
                                     setActiveTab('list');
                                 }}
                                 className="px-6 py-2.5 font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700"
@@ -582,7 +706,7 @@ const RoleManagement = () => {
                                 className="px-6 py-2.5 font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
                             >
                                 {loading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                                Create Role
+                                {editingRoleAlias ? 'Update Role' : 'Create Role'}
                             </button>
                         </div>
                     </div>
@@ -623,7 +747,134 @@ const RoleManagement = () => {
                     </div>
                 )
             }
-        </div >
+
+            {/* View Details Modal */}
+            {showViewModal && (
+                <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all scale-100 opacity-100 dark:bg-slate-900 dark:border dark:border-gray-800 flex flex-col max-h-[90vh]">
+                        {/* Modal Header */}
+                        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-800/50">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <span className="p-1.5 bg-green-100 text-green-600 rounded-lg dark:bg-green-900/30 dark:text-green-400">
+                                    <Eye size={18} />
+                                </span>
+                                Role Details
+                            </h3>
+                            <button
+                                onClick={() => setShowViewModal(false)}
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 overflow-y-auto custom-scrollbar">
+                            {viewLoading ? (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <div className="w-10 h-10 border-3 border-red-500 border-t-transparent rounded-full animate-spin mb-4" />
+                                    <p className="text-gray-500 dark:text-gray-400">Loading role information...</p>
+                                </div>
+                            ) : viewRole ? (
+                                <div className="space-y-8">
+                                    {/* Primary Info */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-1">
+                                            <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold dark:text-gray-400">Role Name</p>
+                                            <p className="text-lg font-bold text-gray-900 dark:text-white">{viewRole.name}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold dark:text-gray-400">Alias</p>
+                                            <p className="font-mono text-sm bg-gray-100 px-3 py-1 rounded-md inline-block dark:bg-slate-800 dark:text-gray-300">
+                                                {viewRole.alias}
+                                            </p>
+                                        </div>
+                                        <div className="space-y-1 md:col-span-2">
+                                            <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold dark:text-gray-400">Description</p>
+                                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed bg-gray-50 p-3 rounded-lg dark:bg-slate-800/50 border border-transparent dark:border-gray-800">
+                                                {viewRole.description || 'No description provided.'}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Status & Meta */}
+                                    <div className="flex flex-wrap gap-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-gray-500 dark:text-gray-400">Status:</span>
+                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${viewRole.is_active
+                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                }`}>
+                                                {viewRole.is_active ? 'Active' : 'Inactive'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-gray-500 dark:text-gray-400">Enabled:</span>
+                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${viewRole.is_enabled
+                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                                : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                                                }`}>
+                                                {viewRole.is_enabled ? 'Yes' : 'No'}
+                                            </span>
+                                        </div>
+                                        {viewRole.created_at && (
+                                            <div className="text-xs text-gray-400 ml-auto flex items-center gap-1">
+                                                <span>Created:</span>
+                                                <span className="font-mono text-gray-500 dark:text-gray-500">{new Date(viewRole.created_at).toLocaleDateString()}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Permissions List */}
+                                    {viewRole.permissions && viewRole.permissions.length > 0 && (
+                                        <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                                            <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                                <Key size={16} className="text-red-500" />
+                                                Assigned Permissions
+                                            </h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                {viewRole.permissions.map((perm, idx) => (
+                                                    <div key={perm.id || idx} className="p-3 border rounded-lg bg-gray-50 dark:bg-slate-800/50 dark:border-gray-700">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <span className="font-medium text-gray-900 dark:text-white text-sm">{perm.name}</span>
+                                                            <span className="text-[10px] bg-white border px-1.5 py-0.5 rounded text-gray-500 font-mono dark:bg-slate-900 dark:border-gray-600">
+                                                                {perm.alias}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {perm.action && Array.isArray(perm.action) && perm.action.map((act, i) => (
+                                                                <span key={i} className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded border border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-900/30 uppercase tracking-wide">
+                                                                    {act}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                                    No details available.
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 dark:bg-slate-800/50 dark:border-gray-800 flex justify-end">
+                            <button
+                                onClick={() => setShowViewModal(false)}
+                                className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors dark:bg-slate-900 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-slate-800"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+        </div>
     );
 };
 

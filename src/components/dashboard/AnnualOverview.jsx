@@ -19,7 +19,7 @@ const AnnualOverview = () => {
                 </button>
             </div>
 
-            <div className="flex-1 w-full min-h-[300px]">
+            <div className="flex-1 w-full h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data} barGap={0} barCategoryGap="20%">
                         <XAxis

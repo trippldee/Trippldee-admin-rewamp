@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, LayoutDashboard, Database, Settings, User, ChevronLeft, ChevronRight, Calculator, Calendar, Bell, ChevronDown, Utensils, Cloud, FileText, CreditCard, Ticket, BarChart3, Search, CheckCircle, Menu, X, Scale, ChefHat, Tag } from 'lucide-react';
+import { LogOut, LayoutDashboard, Database, Settings, User, ChevronLeft, ChevronRight, Calculator, Calendar, Bell, ChevronDown, Utensils, Cloud, FileText, CreditCard, Ticket, BarChart3, Search, CheckCircle, Menu, X, Scale, ChefHat, Tag, Store } from 'lucide-react';
 
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import toast from 'react-hot-toast';
@@ -21,6 +21,8 @@ import RecipeManagement from '../components/admin/RecipeManagement';
 import OfferManagement from '../components/admin/OfferManagement';
 import SubscriptionPlans from '../components/admin/SubscriptionPlans';
 import AdminWebUser from '../components/admin/AdminWebUser';
+import AdminWebEatery from '../components/admin/AdminWebEatery';
+import StaticPages from '../components/admin/StaticPages';
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -121,10 +123,12 @@ const Dashboard = () => {
                 { label: 'Chef' }
             ]
         },
+        { icon: Store, label: 'Admin Web Eatery' },
         { icon: Utensils, label: 'Restaurants' },
         { icon: Tag, label: 'Eatery Offers' },
         { icon: Cloud, label: 'Cloud Kitchen' },
         { icon: FileText, label: 'Post Management' },
+        { icon: FileText, label: 'Static Pages' },
         { icon: ChefHat, label: 'Recipe Management' },
         {
             icon: CreditCard,
@@ -440,12 +444,16 @@ const Dashboard = () => {
                         <UserManagement viewMode="deleted" />
                     ) : activeSection === 'Admin Web User' ? (
                         <AdminWebUser />
+                    ) : activeSection === 'Admin Web Eatery' ? (
+                        <AdminWebEatery />
                     ) : activeSection === 'Permission Management' ? (
                         <PermissionManagement />
                     ) : activeSection === 'BMI' ? (
                         <BMI />
                     ) : activeSection === 'Post Management' ? (
                         <PostManagement />
+                    ) : activeSection === 'Static Pages' ? (
+                        <StaticPages />
                     ) : activeSection === 'Recipe Management' ? (
                         <RecipeManagement />
                     ) : activeSection === 'Eatery Offers' ? (

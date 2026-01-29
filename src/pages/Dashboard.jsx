@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, LayoutDashboard, Database, Settings, User, ChevronLeft, ChevronRight, Calculator, Calendar, Bell, ChevronDown, Utensils, Cloud, FileText, CreditCard, Ticket, BarChart3, Search, CheckCircle, Menu, X, Scale, ChefHat, Tag, Store } from 'lucide-react';
+import { LogOut, LayoutDashboard, Database, Settings, User, ChevronLeft, ChevronRight, Calculator, Calendar, Bell, ChevronDown, Utensils, Cloud, FileText, CreditCard, Ticket, BarChart3, Search, CheckCircle, Menu, X, Scale, ChefHat, Tag, Store, Sliders, Clock, AlertCircle } from 'lucide-react';
 
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import toast from 'react-hot-toast';
@@ -23,6 +23,10 @@ import SubscriptionPlans from '../components/admin/SubscriptionPlans';
 import AdminWebUser from '../components/admin/AdminWebUser';
 import AdminWebEatery from '../components/admin/AdminWebEatery';
 import StaticPages from '../components/admin/StaticPages';
+import GeneralSettings from '../components/admin/GeneralSettings';
+import AllNotifications from '../components/dashboard/AllNotifications';
+import AllActivity from '../components/dashboard/AllActivity';
+import Tickets from '../components/admin/Tickets';
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -40,6 +44,8 @@ const Dashboard = () => {
     const [appSettings, setAppSettings] = useState({ logo: '', company_name: '' });
     const user = JSON.parse(localStorage.getItem('admin_user') || '{}');
     const profileRef = React.useRef(null);
+    const notificationRef = React.useRef(null);
+    const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [expandedMenus, setExpandedMenus] = useState({});
 
     const toggleSubMenu = (label) => {
@@ -54,6 +60,9 @@ const Dashboard = () => {
         const handleClickOutside = (event) => {
             if (profileRef.current && !profileRef.current.contains(event.target)) {
                 setIsProfileOpen(false);
+            }
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+                setIsNotificationOpen(false);
             }
         };
 
@@ -114,6 +123,7 @@ const Dashboard = () => {
                 { label: 'Permission Management' }
             ]
         },
+
         {
             icon: User,
             label: 'Users',
@@ -129,6 +139,7 @@ const Dashboard = () => {
         { icon: Cloud, label: 'Cloud Kitchen' },
         { icon: FileText, label: 'Post Management' },
         { icon: FileText, label: 'Static Pages' },
+        { icon: Ticket, label: 'Tickets' },
         { icon: ChefHat, label: 'Recipe Management' },
         {
             icon: CreditCard,
@@ -137,9 +148,10 @@ const Dashboard = () => {
                 { label: 'Plans' }
             ]
         },
-        { icon: Ticket, label: 'Tickets' },
+
         { icon: BarChart3, label: 'Analytics' },
         { icon: Scale, label: 'BMI' },
+        { icon: Sliders, label: 'General Settings' },
     ];
 
     return (
@@ -324,10 +336,65 @@ const Dashboard = () => {
                         </button>
 
                         {/* Notification */}
-                        <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
-                            <Bell size={24} />
-                            <span className="absolute top-1.5 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
-                        </button>
+                        <div className="relative" ref={notificationRef}>
+                            <button
+                                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                                className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors outline-none"
+                            >
+                                <Bell size={24} />
+                                <span className="absolute top-1.5 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
+                            </button>
+
+                            {/* Notification Dropdown */}
+                            {isNotificationOpen && (
+                                <div className={`absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl shadow-xl border overflow-hidden z-50 ${isDarkMode ? 'bg-[#1e293b] border-gray-800' : 'bg-white border-gray-100'}`}>
+                                    <div className={`px-4 py-3 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+                                        <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Notifications</h3>
+                                        <button className="text-xs font-medium text-orange-600 hover:text-orange-700">Mark all as read</button>
+                                    </div>
+                                    <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+                                        {[
+                                            { id: 1, title: 'New Order Received', desc: 'Order #ORD-2025-001 from Delicious Bites', time: '2 min ago', type: 'order' },
+                                            { id: 2, title: 'Restaurant Approval Pending', desc: 'Spicy Grill House requested approval', time: '1 hour ago', type: 'alert' },
+                                            { id: 3, title: 'Subscription Expiring', desc: 'Golden Dragon subscription expires in 3 days', time: '5 hours ago', type: 'warning' },
+                                            { id: 4, title: 'New User Registration', desc: 'User John Doe registered as a Chef', time: '1 day ago', type: 'info' }
+                                        ].map((item) => (
+                                            <div key={item.id} className={`p-4 border-b hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors cursor-pointer flex gap-3 ${isDarkMode ? 'border-gray-800' : 'border-gray-50'}`}>
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${item.type === 'order' ? 'bg-green-100 text-green-600' :
+                                                    item.type === 'alert' ? 'bg-blue-100 text-blue-600' :
+                                                        item.type === 'warning' ? 'bg-orange-100 text-orange-600' :
+                                                            'bg-gray-100 text-gray-600'
+                                                    }`}>
+                                                    {item.type === 'order' ? <CheckCircle size={18} /> :
+                                                        item.type === 'alert' ? <Store size={18} /> :
+                                                            item.type === 'warning' ? <AlertCircle size={18} /> :
+                                                                <User size={18} />}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className={`text-sm font-semibold mb-0.5 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>{item.title}</p>
+                                                    <p className={`text-xs mb-1.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{item.desc}</p>
+                                                    <div className="flex items-center gap-1 text-[10px] text-gray-400 font-medium uppercase">
+                                                        <Clock size={10} />
+                                                        <span>{item.time}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className={`p-2 border-t text-center ${isDarkMode ? 'bg-[#1e293b] border-gray-800' : 'bg-gray-50 border-gray-100'}`}>
+                                        <button
+                                            onClick={() => {
+                                                setActiveSection('All Notifications');
+                                                setIsNotificationOpen(false);
+                                            }}
+                                            className="text-sm font-medium text-gray-500 hover:text-orange-600 transition-colors py-1"
+                                        >
+                                            View All Notifications
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
                         {/* User Profile */}
                         <div className="relative" ref={profileRef}>
@@ -423,17 +490,23 @@ const Dashboard = () => {
                                 <div className="xl:col-span-2 space-y-6">
                                     <PerformanceCard title="Cloud Kitchen Performance" type="cloud" />
                                     <PerformanceCard title="Restaurant Performance" type="restaurant" />
-                                    <RecentActivity />
+                                    <RecentActivity onViewAll={() => setActiveSection('All Activity')} />
                                 </div>
 
                                 {/* Right Column (Revenue & Notifications) */}
                                 <div className="xl:col-span-1 space-y-6">
                                     <RevenueCards />
-                                    <Notifications />
+                                    <Notifications onViewAll={() => setActiveSection('All Notifications')} />
                                 </div>
                             </div>
                         </div>
 
+                    ) : activeSection === 'All Notifications' ? (
+                        <AllNotifications onBack={() => setActiveSection('Dashboard')} />
+                    ) : activeSection === 'All Activity' ? (
+                        <AllActivity onBack={() => setActiveSection('Dashboard')} />
+                    ) : activeSection === 'Tickets' ? (
+                        <Tickets />
                     ) : activeSection === 'Role Management' ? (
                         <RoleManagement />
                     ) : activeSection === 'User Management' ? (
@@ -450,6 +523,8 @@ const Dashboard = () => {
                         <PermissionManagement />
                     ) : activeSection === 'BMI' ? (
                         <BMI />
+                    ) : activeSection === 'General Settings' ? (
+                        <GeneralSettings />
                     ) : activeSection === 'Post Management' ? (
                         <PostManagement />
                     ) : activeSection === 'Static Pages' ? (

@@ -28,12 +28,17 @@ const ActivityItem = ({ user, action, target, time, type }) => (
     </div>
 );
 
-const RecentActivity = () => {
+const RecentActivity = ({ onViewAll }) => {
     return (
         <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800">
             <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Recent Platform Activity</h3>
-                <button className="text-orange-600 text-sm font-bold hover:underline">View All</button>
+                <button
+                    onClick={onViewAll}
+                    className="text-orange-600 text-sm font-bold hover:underline"
+                >
+                    View All
+                </button>
             </div>
 
             <div className="space-y-6">

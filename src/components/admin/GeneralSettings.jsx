@@ -14,7 +14,7 @@ const GeneralSettings = () => {
         per_page: 10
     });
 
-    // Create/Edit Modal State
+    // Create/Edit Modal State helooeoeo
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState('create'); // 'create' or 'edit'
     const [saving, setSaving] = useState(false);
